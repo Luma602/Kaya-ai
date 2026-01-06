@@ -1,0 +1,11 @@
+
+<h2>Kaya 🌱 (Public)</h2>
+<input id='t'><button onclick='send()'>Send</button>
+<p id='r'></p>
+<script>
+async function send(){
+ let t=document.getElementById('t').value;
+ let r=await fetch('/api/public',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t})});
+ let d=await r.json(); document.getElementById('r').innerText=d.reply;
+}
+</script>
