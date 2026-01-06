@@ -1,2 +1,7 @@
-flask
-gunicorn
+flask>=2.3
+flask-login>=0.6
+gunicorn>=21.2
+requests>=2.31
+
+# Optional (safe to keep for future upgrades)
+python-dotenv>=1.0
