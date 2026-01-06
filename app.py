@@ -1,63 +1,60 @@
+import os
+from flask import Flask, render_template, request, jsonify
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    login_user,
+    login_required,
+    logout_user,
+)
 
-from flask import Flask, render_template, request, jsonify, redirect
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
 from weather import get_weather
 
+# ---------------- APP SETUP ----------------
 app = Flask(__name__)
-app.secret_key = "CHANGE_THIS"
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key")
 
-login_manager = LoginManager(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
 
-USERS = {"owner":{"password":"owner123","role":"owner"}}
+# ---------------- USERS (TEMP – OWNER ONLY) ----------------
+USERS = {
+    "owner": {
+        "password": os.environ.get("OWNER_PASSWORD", "owner123"),
+        "role": "owner"
+    }
+}
 
 class User(UserMixin):
-    def __init__(self, u): self.id=u
+    def __init__(self, username):
+        self.id = username
 
 @login_manager.user_loader
-def load(u):
-    return User(u) if u in USERS else None
+def load_user(user_id):
+    if user_id in USERS:
+        return User(user_id)
+    return None
 
-# -------- PUBLIC CHATBOT --------
+# ---------------- PUBLIC CHATBOT ----------------
 @app.route("/")
 def public_chat():
     return render_template("public.html")
 
 @app.route("/api/public", methods=["POST"])
 def public_api():
-    text=request.json.get("text","").lower()
-    if "ai" in text:
-        return jsonify({"reply":"AI helps farmers increase productivity sustainably."})
-    return jsonify({"reply":"Hello, I am Kaya, your AgriTech assistant."})
+    message = request.json.get("message", "")
+    return jsonify({
+        "reply": f"Kaya says: I received your message -> {message}"
+    })
 
-# -------- OWNER SYSTEM --------
-@app.route("/owner/login", methods=["GET","POST"])
+# ---------------- OWNER LOGIN ----------------
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method=="POST":
-        u=request.form["username"]; p=request.form["password"]
-        if u in USERS and USERS[u]["password"]==p:
-            login_user(User(u))
-            return redirect("/owner")
-    return render_template("login.html")
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
 
-@app.route("/owner")
-@login_required
-def owner_home():
-    return render_template("owner.html")
-
-@app.route("/api/owner", methods=["POST"])
-@login_required
-def owner_api():
-    text=request.json.get("text","").lower()
-    if "weather" in text:
-        return jsonify({"reply":get_weather("Lusaka")})
-    if "bible" in text:
-        return jsonify({"reply":"Proverbs 16:3 — Commit thy works unto the LORD."})
-    return jsonify({"reply":"Owner mode active."})
-
-@app.route("/owner/logout")
-@login_required
-def logout():
-    logout_user(); return redirect("/")
-
-if __name__=="__main__":
-    app.run(debug=True)
+        user = USERS.get(username)
+        if user and user["password"] == password:
+            login_user(User
